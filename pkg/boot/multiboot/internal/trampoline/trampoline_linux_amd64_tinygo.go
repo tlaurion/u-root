@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build linux && amd64 && tinygo
+//go:build (tinygo || tinygo.enable) && linux && amd64
 
 // Package trampoline sets machine to a specific state defined by multiboot v1
 // spec and jumps to the intended kernel.
