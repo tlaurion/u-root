@@ -1,3 +1,5 @@
+//go:build !tinygo
+
 // +build gc
 // +build !noasm
 

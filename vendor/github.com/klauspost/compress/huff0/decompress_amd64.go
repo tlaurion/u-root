@@ -1,4 +1,4 @@
-//go:build amd64 && !appengine && !noasm && gc
+//go:build amd64 && !appengine && !noasm && gc && !tinygo
 // +build amd64,!appengine,!noasm,gc
 
 // This file contains the specialisation of Decoder.Decompress4X

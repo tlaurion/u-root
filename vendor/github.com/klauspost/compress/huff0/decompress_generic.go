@@ -1,4 +1,4 @@
-//go:build !amd64 || appengine || !gc || noasm
+//go:build !amd64 || appengine || !gc || noasm || tinygo
 // +build !amd64 appengine !gc noasm
 
 // This file contains a generic implementation of Decoder.Decompress4X.

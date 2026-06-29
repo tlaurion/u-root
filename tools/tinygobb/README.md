@@ -22,14 +22,20 @@ The necessary additions to TinyGo will be tracked in
 
 ---
 
-## Summary
+## Summary (after applying TinyGo net/os/sync patches + vendor fixups)
+
+See [TINYGO_STATUS.md](../../TINYGO_STATUS.md) for the full analysis of what
+was patched and why.
+
+The work here enabled building u-root with a patched local TinyGo GOROOT.
+The following numbers reflect building with those patches and `-tags tinygo.enable`:
 
 | Category | Count | % |
 |----------|-------|---|
 | PASSING | 135 | 72.6 |
-| TINYGO.ENABLE | 24 | 12.9 |
-| FAILING | 27 | 14.5 |
-| **Total** | **186** | **100** |
+| TINYGO.ENABLE (with patches) | 47 | 25.2 |
+| **Total working** | **182** | **97.8** |
+| FAILING | 4 | 2.2 |
 | Excluded (bind) | 1 | — |
 
 ---
@@ -42,64 +48,18 @@ Targeted OS incompatibility, intentionally skipped from all builds.
 
 ---
 
-## FAILING (27 commands)
+## FAILING (4 commands)
 
-### Root cause 1: Assembly stubs in klauspost/compress (11 commands)
+The remaining 4 failures are in TinyGo's `crypto/tls` and `net/http` packages,
+a separate domain from the `net`/`os`/`sync` package gaps that were already
+addressed.
 
-These commands transitively depend on `vendor/github.com/klauspost/compress/`
-which ships amd64 assembly files (.s) that TinyGo's LLVM backend cannot link.
-The assembly provides optimized huff0 decompression and CPU feature detection.
-
-**Workaround**: unsupported. `-tags noasm` is not recognized by TinyGo's
-build system; these files are always included.
-
-| Command | Error |
-|---------|-------|
-| `cmds/core/init` | `huff0.decompress4x_8b_main_loop_amd64: linker could not find symbol` |
-| `cmds/core/insmod` | same — huff0 amd64 assembly |
-| `cmds/core/rmmod` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/core/kexec` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/exp/bzimage` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/exp/console` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/exp/esxiboot` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/exp/fitboot` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/exp/kconf` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/exp/localboot` | `cpuinfo.x86extensions: undefined symbol` |
-| `cmds/exp/modprobe` | `huff0.decompress4x_8b_main_loop_amd64: linker could not find symbol` |
-
-### Root cause 2: Missing net stdlib methods (13 commands)
-
-TinyGo's `net` package is a partial implementation. The following symbols used
-by u-root commands or their dependencies are absent:
-
-| Missing symbol | Broken command(s) |
-|----------------|-------------------|
-| `net.Interface.Addrs` / `net.InterfaceByName` | `dhclient`, `pxeboot`, `fbnetboot`, `netbootxyz`, `pxeserver` (all via `dhcpv4`) |
-| `net.InterfaceByName` | `netcat` (via `sctp`) |
-| `net.LookupAddr` | `netstat` |
-| `net.InvalidAddrError` / `net.InterfaceByName` / `net.FilePacketConn` / `net.ListenPacket` | `ping` (via `golang.org/x/net/icmp`) |
-| `net.ListenUDP` / `net.UDPConn.ReadFromUDP` | `wget`, `boot` (both via `pack.ag/tftp`) |
-| `net.UnixConn` | `newsshd` (via `gliderlabs/ssh`) |
-| `net.Resolver` | `tcpdump` (via `go-pcap`) |
-| `net.TCPConn.File` | `sluinit` (via `iscsinl`) |
-
-### Root cause 3: Missing os stdlib method (1 command)
-
-| Missing symbol | Broken command |
-|----------------|----------------|
-| `os.File.Chown` | `sshd` (via `pkg/sftp`) |
-
-TinyGo's `os.File` does not implement the `file` interface expected by
-`pkg/sftp` because `Chown` is missing.
-
-### Root cause 4: pkg/ssh9p gaps (2 commands)
-
-`pkg/ssh9p` uses `sync.WaitGroup.Go`, `net.TCPConn.File`, and
-`net.TCPConn.SetKeepAliveConfig` — all absent in TinyGo.
-
-| Missing symbols | Broken commands |
-|----------------|-----------------|
-| `sync.WaitGroup.Go`, `net.TCPConn.File`, `net.TCPConn.SetKeepAliveConfig` | `mount9p`, `ufs` |
+| Command | Error | Root cause |
+|---------|-------|------------|
+| `cmds/core/netcat` | `tls.Conn` undefined | TinyGo `crypto/tls` does not export `Conn` type |
+| `cmds/exp/fbnetboot` | `http.Transport.TLSClientConfig` undefined | TinyGo `net/http.Transport` lacks TLS fields |
+| `cmds/exp/netbootxyz` | `http.Transport.TLSClientConfig` undefined | TinyGo `net/http.Transport` lacks TLS fields |
+| `cmds/exp/ssh` | `package ...` (excluded by `!tinygo` constraint) | Dependencies on missing `crypto/tls` and `net/http` types |
 
 ---
 

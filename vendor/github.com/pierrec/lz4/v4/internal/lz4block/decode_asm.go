@@ -1,4 +1,4 @@
-//go:build (amd64 || arm || arm64) && !appengine && gc && !noasm
+//go:build (amd64 || arm || arm64) && !appengine && gc && !noasm && !tinygo
 // +build amd64 arm arm64
 // +build !appengine
 // +build gc
