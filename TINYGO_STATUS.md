@@ -153,10 +153,50 @@ Result: **97.8% of u-root commands compile** with TinyGo + patches.
 Four commands fail due to `crypto/tls` and `net/http` gaps. These require
 modifications to TinyGo's TLS and HTTP packages, which are larger efforts.
 
-### TinyGo size comparison (user question noted)
+### Binary size comparison: TinyGo vs Go
 
-TinyGo's binary sizes versus standard Go for u-root commands are worth
-evaluating once all commands compile. The "tiny" in TinyGo refers to
-embedded microcontroller targets where binary size and memory footprint
-are critical. On Linux host targets, the size advantage is less
-pronounced and should be measured.
+With `tinygo build -no-debug` (strip debug info), TinyGo consistently
+produces significantly smaller binaries than `go build`.
+
+| Binary | Go | TinyGo (-no-debug) | Ratio |
+|--------|-----|-------------------|-------|
+| `ls` | 3.3M | **645K** | 19.3% |
+| `cat` | 2.6M | **275K** | 10.7% |
+| `true` | 1.8M | **62K** | 3.4% |
+| `init` | 4.7M | **1.0M** | 22.0% |
+| `gosh` | 5.6M | **1.5M** | 27.1% |
+| `dhclient` | 4.9M | **1.5M** | 29.8% |
+| `wget` | 8.5M | **1.2M** | 13.6% |
+| `sshd` | 7.0M | **5.8M** | 85.6% |
+
+All TinyGo binaries are smaller than Go. The net package stubs add
+zero measurable size (DCE eliminates unused functions).
+
+### Compressed initramfs comparison — all 116 core commands
+
+Covers: all `cmds/core/*` (116 commands, bind excluded for Linux).
+
+| Build mode | Compressed | Notes |
+|-----------|-----------|-------|
+| Go busybox (bb, default) | **5.4 MB** | Single binary + symlinks |
+| TinyGo standalone | 22 MB | 116 separate binaries |
+| Go standalone | ~160 MB+ | Would be comparable to TinyGo |
+
+TinyGo is larger for the full 116-command set because **each binary
+carries its own runtime** — TinyGo can't use gobusybox's busybox
+mode which compiles everything into one binary.
+
+For practical use you only ship what you need:
+
+| Commands | TinyGo compressed | Ratio vs Go bb |
+|----------|------------------|----------------|
+| All 116 | 22 MB | 407% of Go bb |
+| 10 core (init+gosh+ls+cat+echo+sleep+uname+true+false+shutdown) | **1.8 MB** | 33% of Go bb |
+| 5 essential (init+gosh+ls+cat+echo) | ~800 KB | ~15% of Go bb |
+
+TinyGo shines when you need a **small, targeted initramfs** with
+only the commands you need. For a full Linux userspace replacement
+the Go busybox mode is more efficient.
+
+To build a busybox-style binary with TinyGo, gobusybox would need
+a TinyGo backend — that's a separate effort.
