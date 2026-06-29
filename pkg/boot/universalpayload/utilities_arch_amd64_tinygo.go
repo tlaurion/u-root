@@ -6,120 +6,22 @@
 
 package universalpayload
 
-/*
-// "textflag.h" is provided by the gc compiler, tinygo does not have this
-#include "trampoline_tinygo_amd64.h"
-*/
-import "C"
+import "errors"
 
-import (
-	"bufio"
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"os"
-	"reflect"
-	"regexp"
-	"strconv"
-	"strings"
-	"unsafe"
+// Stub for TinyGo: UPP boot uses x86 firmware calls via CGo,
+// which is not available under gobusybox.
 
-	"github.com/u-root/u-root/pkg/acpi"
-)
-
-var getAcpiRsdp = acpi.GetRSDP
-
-// Get Physical Address size from sysfs node /proc/cpuinfo.
-// Both Physical and Virtual Address size will be prompted as format:
-// "address sizes	: 39 bits physical, 48 bits virtual"
-// Use regular expression to fetch the integer of Physical Address
-// size before "bits physical" keyword
-func getPhysicalAddressSizes() (uint8, error) {
-	file, err := os.Open(sysfsCPUInfoPath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to open %s: %w", sysfsCPUInfoPath, err)
-	}
-	defer file.Close()
-
-	// Regular expression to match the address size line
-	re := regexp.MustCompile(`address sizes\s*:\s*(\d+)\s+bits physical,\s*(\d+)\s+bits virtual`)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match := re.FindStringSubmatch(line); match != nil {
-			// Convert the physical bits size to integer
-			physicalBits, err := strconv.ParseUint(match[1], 10, 8)
-			if err != nil {
-				return 0, errors.Join(ErrCPUAddressConvert, err)
-			}
-			return uint8(physicalBits), nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("%w: file: %s, err: %w", ErrCPUAddressRead, sysfsCPUInfoPath, err)
-	}
-
-	return 0, ErrCPUAddressNotFound
-}
-
-// Construct trampoline code before jump to entry point of FIT image.
-// Due to lack of support to set value of General Purpose Registers in kexec,
-// bootloader parameter needs to be prepared in trampoline code.
-// Also stack is prepared in trampoline code snippet to ensure no data leak.
-func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
-	ptrToSlice := func(ptr uintptr, size int) []byte {
-		var data []byte
-
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-		sh.Data = ptr
-		sh.Len = size
-		sh.Cap = size
-
-		return data
-	}
-
-	appendUint64 := func(slice []uint8, value uint64) []uint8 {
-		tmpBytes := make([]uint8, 8)
-		binary.LittleEndian.PutUint64(tmpBytes, value)
-		return append(slice, tmpBytes...)
-	}
-
-	trampBegin := C.addrOfStartU()
-
-	// Please keep 'size' parameter of 'ptrToSlice" align with implementation of
-	// trampoline_startU in trampoline_tinygo_amd64.h
-	tramp := ptrToSlice(trampBegin, 32)
-
-	buf = append(buf, tramp...)
-
-	buf = appendUint64(buf, addr+trampolineOffset)
-	buf = appendUint64(buf, addr+fdtDtbOffset)
-	buf = appendUint64(buf, entry)
-
-	return buf
-}
-
-// Get the base address and data from RDSP table
-func archGetAcpiRsdpData() (uint64, []byte, error) {
-	rsdp, _ := getAcpiRsdp()
-	rsdpLen := rsdp.Len()
-
-	if rsdpLen > uint32(pageSize) {
-		return 0, nil, ErrDTRsdpLenOverBound
-	}
-
-	return 0, rsdp.AllData(), nil
-}
-
-func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
-	return 0
-}
-
-func isMemReserved(memType string) bool {
-	if strings.HasPrefix(memType, "PCI MMCONFIG") || strings.HasPrefix(memType, "PCI ECAM") {
-		return true
-	}
-	return false
-}
+func uartInit(port uint16)             {}
+func uartPutchar(c byte)                {}
+func uartGetchar() byte                 { return 0 }
+func uartWasInput() bool                { return false }
+func setupScreens()                     {}
+func startCore(cpu uint, entry, dt uint64) {}
+func addrOfStart() uintptr    { return 0 }
+func addrOfStackTop() uintptr { return 0 }
+func addrOfHobAddr() uintptr  { return 0 }
+func getPhysicalAddressSizes() (uint8, error)  { return 0, errors.New("not implemented") }
+func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 { return buf }
+func archGetAcpiRsdpData() (uint64, []byte, error) { return 0, nil, errors.New("not implemented") }
+func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64  { return 0 }
+func isMemReserved(memType string) bool             { return false }

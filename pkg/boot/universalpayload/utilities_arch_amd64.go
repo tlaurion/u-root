@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build amd64 //go:build amd64 && !tinygo && !tinygo.enable//go:build amd64 && !tinygo && !tinygo.enable !tinygo //go:build amd64 && !tinygo && !tinygo.enable//go:build amd64 && !tinygo && !tinygo.enable !tinygo.enable
+//go:build amd64 && !tinygo && !tinygo.enable
 
 package universalpayload
 
