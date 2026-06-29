@@ -176,6 +176,28 @@ diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo
 +	return nil, errors.New("ListenIP not implemented")
 +}
 +
+diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/http/transport.go /tmp/full_tgo/src/net/http/transport.go
+--- /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/http/transport.go	1969-12-31 19:00:01.000000000 -0500
++++ /tmp/full_tgo/src/net/http/transport.go	2026-06-28 20:56:47.556978202 -0400
+@@ -12,6 +12,7 @@
+ package http
+ 
+ import (
++	"crypto/tls"
+ 	"io"
+ )
+ 
+@@ -21,7 +22,9 @@
+ 	didClose bool
+ }
+ 
+-type Transport struct{}
++type Transport struct {
++	TLSClientConfig *tls.Config
++}
+ 
+ var DefaultTransport RoundTripper = &Transport{}
+ 
 diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/net.go /tmp/full_tgo/src/net/net.go
 --- /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/net.go	1969-12-31 19:00:01.000000000 -0500
 +++ /tmp/full_tgo/src/net/net.go	2026-06-28 20:14:21.329334524 -0400
@@ -229,6 +251,42 @@ diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo
  type listener struct {
  	fd    int
  	laddr *TCPAddr
+diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/tlssock.go /tmp/full_tgo/src/net/tlssock.go
+--- /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/tlssock.go	1969-12-31 19:00:01.000000000 -0500
++++ /tmp/full_tgo/src/net/tlssock.go	2026-06-28 21:03:41.671006841 -0400
+@@ -9,6 +9,7 @@
+ package net
+ 
+ import (
++	"errors"
+ 	"internal/itoa"
+ 	"io"
+ 	"net/netip"
+@@ -139,3 +140,24 @@
+ 	panic("TLSConn.Handshake() not implemented")
+ 	return nil
+ }
++
++// TLSConnectionState contains basic TLS details about the connection.
++type TLSConnectionState struct {
++	HandshakeComplete bool
++}
++
++
++// ConnectionState returns basic TLS details about the connection.
++func (c *TLSConn) ConnectionState() TLSConnectionState {
++	return TLSConnectionState{HandshakeComplete: false}
++}
++
++// CloseWrite shuts down the writing side of the TLS connection.
++func (c *TLSConn) CloseWrite() error {
++	return errors.New("TLSConn.CloseWrite not implemented")
++}
++
++// NetConn returns the underlying connection that is wrapped by c.
++func (c *TLSConn) NetConn() *TCPConn {
++	return nil
++}
 diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/udpsock.go /tmp/full_tgo/src/net/udpsock.go
 --- /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/udpsock.go	1969-12-31 19:00:01.000000000 -0500
 +++ /tmp/full_tgo/src/net/udpsock.go	2026-06-28 20:14:21.325334562 -0400

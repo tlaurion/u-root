@@ -1,0 +1,22 @@
+diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/http/transport.go /tmp/full_tgo/src/net/http/transport.go
+--- /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/net/http/transport.go	1969-12-31 19:00:01.000000000 -0500
++++ /tmp/full_tgo/src/net/http/transport.go	2026-06-28 20:56:47.556978202 -0400
+@@ -12,6 +12,7 @@
+ package http
+ 
+ import (
++	"crypto/tls"
+ 	"io"
+ )
+ 
+@@ -21,7 +22,9 @@
+ 	didClose bool
+ }
+ 
+-type Transport struct{}
++type Transport struct {
++	TLSClientConfig *tls.Config
++}
+ 
+ var DefaultTransport RoundTripper = &Transport{}
+ 
