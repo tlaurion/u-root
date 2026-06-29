@@ -59,6 +59,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	compilerFlag := flag.String("compiler", "", "override go compiler used (e.g. /path/to/tinygo)")
+
 	env := golang.Default(golang.DisableCGO())
 	f := &mkuimage.Flags{
 		Commands:      mkuimage.CommandFlags{Builder: "bb"},
@@ -73,6 +75,11 @@ func main() {
 	tf := &mkuimage.TemplateFlags{}
 	tf.RegisterFlags(flag.CommandLine)
 	flag.Parse()
+
+	if *compilerFlag != "" {
+		env = golang.Default(golang.DisableCGO(), golang.WithCompiler(*compilerFlag))
+		f.Commands.BuildTags = append(f.Commands.BuildTags, "tinygo.enable")
+	}
 
 	// Set defaults.
 	m := []uimage.Modifier{

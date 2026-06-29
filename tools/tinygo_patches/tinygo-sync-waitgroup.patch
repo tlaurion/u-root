@@ -1,0 +1,18 @@
+--- a/src/sync/waitgroup.go
++++ b/src/sync/waitgroup.go
+@@ -83,3 +83,15 @@
+ 		}
+ 	}
+ }
++
++// Go calls the given function in a new goroutine.
++// It blocks until the goroutine has started.
++// It adds 1 to the WaitGroup counter before starting, and
++// calls Done when the goroutine completes.
++func (wg *WaitGroup) Go(f func()) {
++	wg.Add(1)
++	go func() {
++		defer wg.Done()
++		f()
++	}()
++}

@@ -1,0 +1,84 @@
+--- a/src/net/udpsock.go
++++ b/src/net/udpsock.go
+@@ -206,6 +206,30 @@
+ 	return nil, errors.New("SyscallConn not implemented")
+ }
+ 
++// ListenUDP acts like ListenPacket for UDP networks.
++func ListenUDP(network string, laddr *UDPAddr) (*UDPConn, error) {
++	switch network {
++	case "udp", "udp4", "udp6":
++	default:
++		return nil, UnknownNetworkError(network)
++	}
++	fd, err := netdev.Socket(_AF_INET, _SOCK_DGRAM, _IPPROTO_UDP)
++	if err != nil {
++		return nil, err
++	}
++	laddrport := laddr.AddrPort()
++	err = netdev.Bind(fd, laddrport)
++	if err != nil {
++		netdev.Close(fd)
++		return nil, err
++	}
++	return &UDPConn{
++		fd:    fd,
++		net:   network,
++		laddr: laddr,
++	}, nil
++}
++
+ // TINYGO: Use netdev for Conn methods: Read = Recv, Write = Send, etc.
+ 
+ func (c *UDPConn) Read(b []byte) (int, error) {
+@@ -234,7 +258,28 @@
+ 
+ // ReadFrom implements the PacketConn ReadFrom method.
+ func (c *UDPConn) ReadFrom(b []byte) (int, Addr, error) {
+-	return 0, nil, errors.New("ReadFrom not implemented")
++	n, err := netdev.Recv(c.fd, b, 0, c.readDeadline)
++	if n < 0 {
++		n = 0
++	}
++	if err != nil && err != io.EOF {
++		err = &OpError{Op: "read", Net: c.net, Source: c.laddr, Addr: c.raddr, Err: err}
++	}
++	return n, c.raddr, err
++}
++
++// ReadFromUDP reads a UDP packet from c, copying the payload into b.
++// It returns the number of bytes read and the remote address.
++func (c *UDPConn) ReadFromUDP(b []byte) (int, *UDPAddr, error) {
++	n, addr, err := c.ReadFrom(b)
++	if err != nil {
++		return 0, nil, err
++	}
++	ua, ok := addr.(*UDPAddr)
++	if !ok {
++		return 0, nil, &OpError{Op: "readfrom", Net: c.net, Source: c.laddr, Addr: c.raddr, Err: errors.New("unexpected address type")}
++	}
++	return n, ua, err
+ }
+ 
+ // ReadMsgUDP reads a message from c, copying the payload into b and
+@@ -251,7 +296,19 @@
+ 
+ // WriteTo implements the PacketConn WriteTo method.
+ func (c *UDPConn) WriteTo(b []byte, addr Addr) (int, error) {
+-	return 0, errors.New("WriteTo not implemented")
++	n, err := netdev.Send(c.fd, b, 0, c.writeDeadline)
++	if n < 0 {
++		n = 0
++	}
++	if err != nil {
++		err = &OpError{Op: "write", Net: c.net, Source: c.laddr, Addr: addr, Err: err}
++	}
++	return n, err
++}
++
++// WriteToUDP writes a UDP packet to addr via c, returning the number of bytes written.
++func (c *UDPConn) WriteToUDP(b []byte, addr *UDPAddr) (int, error) {
++	return c.WriteTo(b, addr)
+ }
+ 
+ // WriteMsgUDP writes a message to addr via c if c isn't connected, or

@@ -1,0 +1,21 @@
+--- a/src/net/http/transport.go
++++ b/src/net/http/transport.go
+@@ -12,6 +12,7 @@
+ package http
+ 
+ import (
++	"crypto/tls"
+ 	"io"
+ )
+ 
+@@ -21,7 +22,9 @@
+ 	didClose bool
+ }
+ 
+-type Transport struct{}
++type Transport struct {
++	TLSClientConfig *tls.Config
++}
+ 
+ var DefaultTransport RoundTripper = &Transport{}
+ 

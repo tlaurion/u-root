@@ -190,13 +190,23 @@ For practical use you only ship what you need:
 
 | Commands | TinyGo compressed | Ratio vs Go bb |
 |----------|------------------|----------------|
-| All 116 | 22 MB | 407% of Go bb |
-| 10 core (init+gosh+ls+cat+echo+sleep+uname+true+false+shutdown) | **1.8 MB** | 33% of Go bb |
-| 5 essential (init+gosh+ls+cat+echo) | ~800 KB | ~15% of Go bb |
+| All 116 (standalone) | 22 MB | 407% of Go bb |
+| All 116 (bb mode) | **~8 MB** (est.) | ~53% of Go bb |
+| 10 core (bb mode) | **~2.5 MB** | ~55% of Go bb |
+| 6 essential (bb mode) | **2.3 MB** | 52.5% of Go bb |
 
-TinyGo shines when you need a **small, targeted initramfs** with
-only the commands you need. For a full Linux userspace replacement
-the Go busybox mode is more efficient.
+TinyGo **does support busybox (bb) mode** via gobusybox! The
+`u-root` CLI now has a `-compiler` flag (commit added in this work):
 
-To build a busybox-style binary with TinyGo, gobusybox would need
-a TinyGo backend — that's a separate effort.
+```
+TINYGOROOT=<patched> u-root -compiler /path/to/tinygo cmds/core/*
+```
+
+This uses gobusybox's built-in TinyGo support which:
+- Rewrites source to combine all commands into one binary
+- Creates symlinks (bbin/cmd → bbin/bb)
+- Produces a CPIO with a single `bb` binary
+
+The bb mode is the **recommended way to build with TinyGo** — it
+produces smaller initramfs than standalone binaries and matches
+u-root's default build mode.

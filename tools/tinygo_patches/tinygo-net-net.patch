@@ -1,0 +1,16 @@
+--- a/src/net/net.go
++++ b/src/net/net.go
+@@ -302,6 +302,13 @@
+ 	return s
+ }
+ 
++// InvalidAddrError is an error type representing an invalid address.
++type InvalidAddrError string
++
++func (e InvalidAddrError) Error() string { return string(e) }
++func (e InvalidAddrError) Timeout() bool   { return false }
++func (e InvalidAddrError) Temporary() bool { return false }
++
+ // errNetClosing is the type of the variable ErrNetClosing.
+ // This is used to implement the net.Error interface.
+ type errNetClosing struct{}
