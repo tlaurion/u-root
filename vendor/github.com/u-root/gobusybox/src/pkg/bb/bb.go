@@ -217,7 +217,13 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 	}
 
 	// Get ready to compile bb.
-	buildEnv := opts.Env.Copy(golang.WithGO111MODULE("off"), golang.WithGOPATH(tmpDir), golang.WithMod(""))
+	// GO111MODULE must be "off" for Go builds (GOPATH mode with vendor dir),
+	// but "auto" for TinyGo (needs module resolution to avoid vendored asm stubs).
+	goModule := "off"
+	if opts.Env.Compiler.Type == golang.CompilerTinygo {
+		goModule = "auto"
+	}
+	buildEnv := opts.Env.Copy(golang.WithGO111MODULE(goModule), golang.WithGOPATH(tmpDir), golang.WithMod(""))
 	if err := buildEnv.BuildDir(bbDir, opts.BinaryPath, opts.GoBuildOpts); err != nil {
 		return &ErrBuild{
 			CmdDir: bbDir,
