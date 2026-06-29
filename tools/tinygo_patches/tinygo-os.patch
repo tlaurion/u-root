@@ -1,0 +1,27 @@
+diff -ruN /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/os/file_unix_chown.go /tmp/full_tgo/src/os/file_unix_chown.go
+--- /nix/store/aig3ajvcpp7j89zzj81cym15kxydgaa4-tinygo-0.40.1/share/tinygo/src/os/file_unix_chown.go	1969-12-31 19:00:00.000000000 -0500
++++ /tmp/full_tgo/src/os/file_unix_chown.go	2026-06-28 20:23:08.702936866 -0400
+@@ -0,0 +1,23 @@
++//go:build darwin || (linux && !baremetal && !wasm_unknown && !nintendoswitch) || wasip1 || wasip2
++
++package os
++
++import "syscall"
++
++// Chown changes the owner and group ids of the named file.
++func (f *File) Chown(uid, gid int) error {
++	if f == nil {
++		return ErrInvalid
++	}
++	if f.handle == nil {
++		return ErrClosed
++	}
++	longName := fixLongPath(f.name)
++	e := ignoringEINTR(func() error {
++		return syscall.Chown(longName, uid, gid)
++	})
++	if e != nil {
++		return &PathError{Op: "chown", Path: f.name, Err: e}
++	}
++	return nil
++}
